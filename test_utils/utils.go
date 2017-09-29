@@ -143,7 +143,7 @@ func RunIPAMPlugin(netconf, command, args, cniVersion string) (*current.Result, 
 			fmt.Sprintf("CNI_COMMAND=%s", command),
 			fmt.Sprintf("CNI_ARGS=%s", args),
 		},
-		Path: "dist/" + conf.IPAM.Type,
+		Path: fmt.Sprintf("%s/%s", os.Getenv("DIST"), conf.IPAM.Type),
 	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -243,7 +243,7 @@ func RunCNIPluginWithId(netconf, k8sName, ip, containerId string, targetNs ns.Ne
 	env := []string{
 		"CNI_COMMAND=ADD",
 		"CNI_IFNAME=eth0",
-		"CNI_PATH=dist",
+		fmt.Sprintf("CNI_PATH=%s", os.Getenv("DIST")),
 		fmt.Sprintf("CNI_CONTAINERID=%s", containerId),
 		fmt.Sprintf("CNI_NETNS=%s", targetNs.Path()),
 		k8sEnv,
@@ -253,7 +253,7 @@ func RunCNIPluginWithId(netconf, k8sName, ip, containerId string, targetNs ns.Ne
 
 	// Run the CNI plugin passing in the supplied netconf
 	// TODO - Get rid of this PLUGIN thing and use netconf instead
-	subProcess := exec.Command(fmt.Sprintf("dist/%s", os.Getenv("PLUGIN")), netconf)
+	subProcess := exec.Command(fmt.Sprintf("%s/%s", os.Getenv("DIST"), os.Getenv("PLUGIN")), netconf)
 	subProcess.Env = env
 	stdin, err := subProcess.StdinPipe()
 	if err != nil {
@@ -343,14 +343,14 @@ func DeleteContainerWithId(netconf, netnspath, name, containerId string) (exitCo
 		fmt.Sprintf("CNI_CONTAINERID=%s", container_id),
 		fmt.Sprintf("CNI_NETNS=%s", netnspath),
 		"CNI_IFNAME=eth0",
-		"CNI_PATH=dist",
+		fmt.Sprintf("CNI_PATH=%s", os.Getenv("DIST")),
 		k8sEnv,
 	}
 
 	log.Debugf("Calling CNI plugin with the following env vars: %v", env)
 
 	// Run the CNI plugin passing in the supplied netconf
-	subProcess := exec.Command(fmt.Sprintf("dist/%s", os.Getenv("PLUGIN")), netconf)
+	subProcess := exec.Command(fmt.Sprintf("%s/%s", os.Getenv("DIST"), os.Getenv("PLUGIN")), netconf)
 	subProcess.Env = env
 	stdin, err := subProcess.StdinPipe()
 	if err != nil {

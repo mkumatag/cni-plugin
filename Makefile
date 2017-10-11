@@ -156,6 +156,30 @@ test-containerized: run-etcd run-k8s-apiserver build-containerized $(DIST)/host-
 			ginkgo'
 	make stop-etcd
 
+# This does not currently work, kubernetes needs additional configuration
+# before the tests will run correctly.
+.PHONY: test-containerized-all-datastore
+test-containerized-all-datastore:
+	for datastore in "etcdv3" "kubernetes" ; do \
+		make test-containerized DATASTORE_TYPE=$$datastore; \
+	done
+
+# We pre-build the test binary so that we can run it outside a container and allow it
+# to interact with docker.
+k8s-install/scripts/install_cni.test: vendor
+	-mkdir -p .go-pkg-cache
+	docker run --rm \
+	-e LOCAL_USER_ID=$(LOCAL_USER_ID) \
+	-v $(CURDIR):/go/src/github.com/projectcalico/cni-plugin:rw \
+	-v $(CURDIR)/.go-pkg-cache:/go/pkg/:rw \
+		$(CALICO_BUILD) sh -c '\
+			cd /go/src/github.com/projectcalico/cni-plugin && \
+			go test ./k8s-install/scripts -c --tags install_cni_test -o ./k8s-install/scripts/install_cni.test'
+
+.PHONY: test-install-cni
+## Test the install-cni.sh script
+test-install-cni: docker-image k8s-install/scripts/install_cni.test
+	cd k8s-install/scripts && DEPLOY_CONTAINER_NAME=$(DEPLOY_CONTAINER_NAME) ./install_cni.test
 
 run-test-containerized-without-building: run-etcd run-k8s-apiserver
 	docker run --rm --privileged --net=host \
